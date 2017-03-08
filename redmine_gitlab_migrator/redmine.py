@@ -1,5 +1,8 @@
 from itertools import chain
 import re
+import urllib.request
+import os
+
 
 from . import APIClient, Project
 
@@ -57,9 +60,14 @@ class RedmineProject(Project):
 
     def __init__(self, url, *args, **kwargs):
         normalized_url = self._canonicalize_url(url)
+        print ("normalized url=" + normalized_url)
         super().__init__(normalized_url, *args, **kwargs)
         self.api_url = '{}.json'.format(self.public_url)
+        print ("api url=" + self.api_url)
         self.instance_url = self._url_match.group('base_url')
+        print ("instance url=" + self.instance_url)
+        self.api_key = args[0].api_key
+        print ("api key=" + self.api_key)
 
     @classmethod
     def _canonicalize_url(cls, url):
@@ -84,10 +92,37 @@ class RedmineProject(Project):
         # It's impossible to get issue history from list view, so get it from
         # detail view...
 
+        count = 0 
+        d_folder = "downloads"
+        
         for issue_id in (i['id'] for i in issues):
             issue_url = '{}/issues/{}.json?include=journals,watchers,relations,childrens,attachments'.format(
                 self.instance_url, issue_id)
-            detailed_issues.append(self.api.get(issue_url))
+                
+            count += 1
+            if count > 2:
+                return detailed_issues  
+            
+            print ("##########################") 
+            print(issue_id)  
+            issue = self.api.get(issue_url)
+            #print (issue)
+            attachments = issue["attachments"]
+            for attachment in attachments:
+                print (attachment["filename"])
+                print (attachment["content_url"])
+                 
+                issue_d_folder = os.path.join(d_folder, str(issue_id));
+                if not os.path.exists(os.path.join(issue_d_folder)):
+                    os.makedirs(issue_d_folder)
+                dl_file = os.path.join(issue_d_folder, attachment["filename"]);
+                urllib.request.urlretrieve (attachment["content_url"] +"?key=" + self.api_key, dl_file)
+
+                attachment["local_file"] = dl_file;
+                
+                print (issue)
+
+            detailed_issues.append(issue)
 
         return detailed_issues
 
