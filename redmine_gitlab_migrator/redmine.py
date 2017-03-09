@@ -100,7 +100,7 @@ class RedmineProject(Project):
                 self.instance_url, issue_id)
                 
             count += 1
-            if count > 2:
+            if count > 20:
                 return detailed_issues  
             
             print ("##########################") 

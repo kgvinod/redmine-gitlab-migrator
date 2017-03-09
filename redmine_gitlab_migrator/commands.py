@@ -99,29 +99,47 @@ def check_origin_milestone(redmine_project, gitlab_project):
 
 
 def perform_migrate_issues(args):
+
+    print ("@@@inside perform_migrate_issues")
+    
+    print ("@@@create clients")    
     redmine = RedmineClient(args.redmine_key)
     gitlab = GitlabClient(args.gitlab_key)
 
+    print ("@@@create redmine project")    
     redmine_project = RedmineProject(args.redmine_project_url, redmine)
+    
+    print ("@@@create gitlab project")    
     gitlab_project = GitlabProject(args.gitlab_project_url, gitlab)
 
+    print ("@@@get gitlab instance")    
     gitlab_instance = gitlab_project.get_instance()
 
+    print ("@@@get gitlab users index")    
     gitlab_users_index = gitlab_instance.get_users_index()
+    print ("@@@gitlab users index =" + str(len(gitlab_users_index)))
+    print ("@@@get redmine users index")    
     redmine_users_index = redmine_project.get_users_index()
+    print ("@@@redmine users index =" + str(len(redmine_users_index)))    
 
     checks = [
         (check_users, 'Required users presence'),
         (check_no_issue, 'Project has no pre-existing issue'),
     ]
+    
+    print ("@@@before checks")
+    
     for i in checks:
         check(
             *i, redmine_project=redmine_project, gitlab_project=gitlab_project)
 
     # Get issues
+    print ("@@@get issues")
 
     issues = redmine_project.get_all_issues()
     milestones_index = gitlab_project.get_milestones_index()
+    
+    print ("@@@convert issues")    
     issues_data = (
         convert_issue(
             i, redmine_users_index, gitlab_users_index, milestones_index)
@@ -143,6 +161,7 @@ def perform_migrate_issues(args):
                 data['title'],
                 len(meta['notes'])))
         else:
+            print ("@@@create issue")    
             created = gitlab_project.create_issue(data, meta)
             log.info('#{iid} {title}'.format(**created))
 
@@ -223,7 +242,12 @@ def perform_migrate_roadmap(args):
 
 
 def main():
+
+    print ("@@@main")
+        
     args = parse_args()
+    
+    print (args)
 
     if hasattr(args, 'func'):
         if args.debug:
@@ -234,6 +258,7 @@ def main():
         # Configure global logging
         setup_module_logging('redmine_gitlab_migrator', level=loglevel)
         try:
+            print ("@@@calling args.func")
             args.func(args)
 
         except CommandError as e:

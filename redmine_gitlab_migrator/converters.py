@@ -2,6 +2,9 @@
 """
 
 import logging
+import requests
+
+from . import gitlab
 
 
 log = logging.getLogger(__name__)
@@ -86,11 +89,22 @@ def convert_issue(redmine_issue, redmine_user_index, gitlab_user_index,
     if len(relations_text) > 0:
         relations_text = ', ' + relations_text
 
+    # Upload the attachments
+    upload_url = 'http://10.0.0.111/api/v3/projects/1/uploads'
+    attachments = redmine_issue["attachments"]
+    attachment_markdown = ''
+    for attachment in attachments:
+        files = {'file': open(attachment["local_file"], 'rb')}
+        headers = {'PRIVATE-TOKEN': 'RkexA5_bDU4M3w_stpis'}
+        #headers = gitlab.get_auth_headers()
+        resp = requests.post(upload_url, files=files, headers=headers)
+        attachment_markdown += resp.json()['markdown']
+    
     data = {
         'title': '-RM-{}-MR-{}'.format(
             redmine_issue['id'], redmine_issue['subject']),
         'description': '{}\n\n*(from redmine: created on {}{}{})*'.format(
-            redmine_issue['description'],
+            redmine_issue['description'] + attachment_markdown,
             redmine_issue['created_on'][:10],
             close_text,
             relations_text
