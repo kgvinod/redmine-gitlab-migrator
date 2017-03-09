@@ -1,4 +1,5 @@
 import re
+import requests
 
 from . import APIClient, Project
 
@@ -66,6 +67,23 @@ class GitlabProject(Project):
         :param data: dict formatted as the gitlab API expects it
         :return: the created issue (without notes)
         """
+        
+        # Upload the attachments
+        upload_url = '{}/uploads'.format(self.api_url) #'http://10.0.0.111/api/v3/projects/1/uploads'
+        attachment_markdown = ''
+        for attachment in attachments:    
+            files = {'file': open(attachment["local_file"], 'rb')}    
+            headers = self.api.get_auth_headers() #{'PRIVATE-TOKEN': 'RkexA5_bDU4M3w_stpis'}    
+            resp = requests.post(upload_url, files=files, headers=headers)    
+            if 'markdown' in resp:        
+                attachment_markdown += resp.json()['markdown']        
+                print ("File uploaded to " + resp['url'])    
+            else:         
+                print ("Upload of file " + attachment["local_file"] + " failed")
+                
+        # Add the markdown to the description
+        data['description'] = attachment_markdown + data['description']
+        
         issues_url = '{}/issues'.format(self.api_url)
         issue = self.api.post(
             issues_url, data=data, headers={'SUDO': meta['sudo_user']})
