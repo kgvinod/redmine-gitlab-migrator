@@ -88,23 +88,12 @@ def convert_issue(redmine_issue, redmine_user_index, gitlab_user_index,
     relations_text = relations_to_string(relations, redmine_issue['id'])
     if len(relations_text) > 0:
         relations_text = ', ' + relations_text
-
-    # Upload the attachments
-    upload_url = 'http://10.0.0.111/api/v3/projects/1/uploads'
-    attachments = redmine_issue["attachments"]
-    attachment_markdown = ''
-    for attachment in attachments:
-        files = {'file': open(attachment["local_file"], 'rb')}
-        headers = {'PRIVATE-TOKEN': 'RkexA5_bDU4M3w_stpis'}
-        #headers = gitlab.get_auth_headers()
-        resp = requests.post(upload_url, files=files, headers=headers)
-        attachment_markdown += resp.json()['markdown']
     
     data = {
         'title': '-RM-{}-MR-{}'.format(
             redmine_issue['id'], redmine_issue['subject']),
         'description': '{}\n\n*(from redmine: created on {}{}{})*'.format(
-            redmine_issue['description'] + attachment_markdown,
+            redmine_issue['description'],
             redmine_issue['created_on'][:10],
             close_text,
             relations_text
@@ -137,7 +126,7 @@ def convert_issue(redmine_issue, redmine_user_index, gitlab_user_index,
     if assigned_to is not None:
         data['assignee_id'] = redmine_uid_to_gitlab_uid(
             assigned_to['id'], redmine_user_index, gitlab_user_index)
-    return data, meta
+    return data, meta, redmine_issue["attachments"]
 
 
 def convert_version(redmine_version):

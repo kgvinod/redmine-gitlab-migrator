@@ -1,4 +1,5 @@
 import re
+import requests
 
 from . import APIClient, Project
 
@@ -59,13 +60,39 @@ class GitlabProject(Project):
         """
         return self.api.get(self.api_url)['default_branch'] is None
 
-    def create_issue(self, data, meta):
+    def create_issue(self, data, meta, attachments):
         """ High-level issue creation
 
         :param meta: dict with "sudo_user", "should_close" and "notes" keys
         :param data: dict formatted as the gitlab API expects it
         :return: the created issue (without notes)
         """
+        
+        print ("@@@ ENTRY gitlab::create_issue")
+        
+        # Upload the attachments
+        upload_url = '{}/uploads'.format(self.api_url) 
+        #upload_url = 'http://10.0.0.111/api/v3/projects/1/uploads'
+                
+        print ("@@@@ upload URL=" + upload_url)
+        
+        attachment_markdown = ''
+        for attachment in attachments:    
+            files = {'file': open(attachment["local_file"], 'rb')}    
+            headers = self.api.get_auth_headers() #{'PRIVATE-TOKEN': 'xxxxxxxx'} 
+            
+            resp = requests.post(upload_url, files=files, headers=headers)  
+            jresp = resp.json()
+
+            if 'markdown' in jresp:        
+                attachment_markdown += jresp['markdown']        
+                print ("File uploaded to " + str(jresp['url'])) 
+            else:         
+                print ("Upload of file " + attachment["local_file"] + " failed")
+                
+        # Add the markdown to the description
+        data['description'] = data['description'] + attachment_markdown
+        
         issues_url = '{}/issues'.format(self.api_url)
         issue = self.api.post(
             issues_url, data=data, headers={'SUDO': meta['sudo_user']})

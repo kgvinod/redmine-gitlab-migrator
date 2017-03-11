@@ -52,6 +52,8 @@ class RedmineClient(APIClient):
 
 
 class RedmineProject(Project):
+    
+    
     REGEX_PROJECT_URL = re.compile(
         r'^(?P<base_url>https?://.*)/projects/(?P<project_name>[\w_-]+)$')
 
@@ -68,6 +70,7 @@ class RedmineProject(Project):
         print ("instance url=" + self.instance_url)
         self.api_key = args[0].api_key
         print ("api key=" + self.api_key)
+        self.All_Issue_List = []
 
     @classmethod
     def _canonicalize_url(cls, url):
@@ -86,6 +89,12 @@ class RedmineProject(Project):
             return url
 
     def get_all_issues(self):
+    
+        if len(self.All_Issue_List) > 0:
+            return self.All_Issue_List
+    
+        print ("@@@ ENTRY redmine::get_all_issues")    
+        
         issues = self.api.unpaginated_get(
             '{}/issues.json?status_id=*'.format(self.public_url))
         detailed_issues = []
@@ -100,18 +109,17 @@ class RedmineProject(Project):
                 self.instance_url, issue_id)
                 
             count += 1
-            if count > 20:
-                return detailed_issues  
+            #if count > 50:
+            #    self.All_Issue_List = detailed_issues
+            #    return detailed_issues  
             
-            print ("##########################") 
-            print(issue_id)  
             issue = self.api.get(issue_url)
-            #print (issue)
+            print ("@@@@ got issue with id=" + str(issue['id']))    
+
             attachments = issue["attachments"]
             for attachment in attachments:
-                print (attachment["filename"])
-                print (attachment["content_url"])
-                 
+                print ("@@@@@ attachment=" + attachment["filename"])
+
                 issue_d_folder = os.path.join(d_folder, str(issue_id));
                 if not os.path.exists(os.path.join(issue_d_folder)):
                     os.makedirs(issue_d_folder)
@@ -119,11 +127,11 @@ class RedmineProject(Project):
                 urllib.request.urlretrieve (attachment["content_url"] +"?key=" + self.api_key, dl_file)
 
                 attachment["local_file"] = dl_file;
-                
-                print (issue)
 
             detailed_issues.append(issue)
-
+            
+        print ("@@@ EXIT redmine::get_all_issues")
+        self.All_Issue_List = detailed_issues
         return detailed_issues
 
     def get_participants(self):
@@ -132,10 +140,18 @@ class RedmineProject(Project):
         :return: list of all users participating on issues
         :rtype: list
         """
+        
+        print ("@@@ ENTRY redmine::get_participants")
+            
         user_ids = set()
         users = []
         # FIXME: cache
-        for i in self.get_all_issues():
+        
+        print ("@@@@ get all issues")
+        all_issues = self.get_all_issues()
+        print ("@@@@ # of issues=" + str(len(all_issues)))
+                
+        for i in all_issues:
             for i in chain(i.get('watchers', []),
                            [i['author'], i.get('assigned_to', None)]):
 
@@ -148,6 +164,9 @@ class RedmineProject(Project):
             if i != ANONYMOUS_USER_ID:
                 users.append(self.api.get('{}/users/{}.json'.format(
                     self.instance_url, i)))
+                    
+        print ("@@@@ # of participants=" + str(len(users)))   
+        print ("@@@ EXIT redmine::get_participants")                 
         return users
 
     def get_users_index(self):

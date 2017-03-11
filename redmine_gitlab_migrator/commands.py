@@ -116,8 +116,9 @@ def perform_migrate_issues(args):
     gitlab_instance = gitlab_project.get_instance()
 
     print ("@@@get gitlab users index")    
-    gitlab_users_index = gitlab_instance.get_users_index()
+    gitlab_users_index = gitlab_instance.get_users_index()    
     print ("@@@gitlab users index =" + str(len(gitlab_users_index)))
+    
     print ("@@@get redmine users index")    
     redmine_users_index = redmine_project.get_users_index()
     print ("@@@redmine users index =" + str(len(redmine_users_index)))    
@@ -145,7 +146,7 @@ def perform_migrate_issues(args):
             i, redmine_users_index, gitlab_users_index, milestones_index)
         for i in issues)
 
-    for data, meta in issues_data:
+    for data, meta, attachments in issues_data:
         if args.check:
             milestone_id = data.get('milestone_id', None)
             if milestone_id:
@@ -162,7 +163,7 @@ def perform_migrate_issues(args):
                 len(meta['notes'])))
         else:
             print ("@@@create issue")    
-            created = gitlab_project.create_issue(data, meta)
+            created = gitlab_project.create_issue(data, meta, attachments)
             log.info('#{iid} {title}'.format(**created))
 
 
