@@ -116,8 +116,9 @@ def perform_migrate_issues(args):
     gitlab_instance = gitlab_project.get_instance()
 
     print ("@@@get gitlab users index")    
-    gitlab_users_index = gitlab_instance.get_users_index()
+    gitlab_users_index = gitlab_instance.get_users_index()    
     print ("@@@gitlab users index =" + str(len(gitlab_users_index)))
+    
     print ("@@@get redmine users index")    
     redmine_users_index = redmine_project.get_users_index()
     print ("@@@redmine users index =" + str(len(redmine_users_index)))    
