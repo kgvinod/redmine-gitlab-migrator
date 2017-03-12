@@ -146,7 +146,7 @@ def perform_migrate_issues(args):
             i, redmine_users_index, gitlab_users_index, milestones_index)
         for i in issues)
 
-    for data, meta, attachments in issues_data:
+    for data, meta, attachments, labels in issues_data:
         if args.check:
             milestone_id = data.get('milestone_id', None)
             if milestone_id:
@@ -163,7 +163,7 @@ def perform_migrate_issues(args):
                 len(meta['notes'])))
         else:
             print ("@@@create issue")    
-            created = gitlab_project.create_issue(data, meta, attachments)
+            created = gitlab_project.create_issue(data, meta, attachments, labels)
             log.info('#{iid} {title}'.format(**created))
 
 

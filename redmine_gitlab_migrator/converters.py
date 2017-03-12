@@ -37,8 +37,10 @@ def convert_notes(redmine_issue_journals, redmine_user_index):
     for entry in redmine_issue_journals:
         journal_notes = entry.get('notes', '')
         if len(journal_notes) > 0:
-            body = "{}\n\n*(from redmine: written on {})*".format(
-                journal_notes, entry['created_on'][:10])
+            #body = "{}\n\n*(from redmine: written on {})*".format(
+            #    journal_notes, entry['created_on'][:10])
+            body = "{}\n\n*(migrated from redmine)*".format(
+                journal_notes)                
             try:
                 author = redmine_uid_to_login(
                     entry['user']['id'], redmine_user_index)
@@ -49,7 +51,7 @@ def convert_notes(redmine_issue_journals, redmine_user_index):
                     'Redmine user {} is unknown, attribute note '
                     'to current admin\n'.format(entry['user']))
                 author = None
-            yield {'body': body}, {'sudo_user': author}
+            yield {'body': body, 'created_at': entry['created_on']}, {'sudo_user': author}
 
 
 def relations_to_string(relations, issue_id):
@@ -88,19 +90,49 @@ def convert_issue(redmine_issue, redmine_user_index, gitlab_user_index,
     relations_text = relations_to_string(relations, redmine_issue['id'])
     if len(relations_text) > 0:
         relations_text = ', ' + relations_text
+        
+    """
+    We need to bring 3 redmine fields to Gitlab as labels
+        
+    Tracker : bug/feature/support => migrate as-is    
+    Status:
+            New + 
+            In Progress +
+            Resolved +
+            Feedback => Not needed
+            Closed +
+            QA-verified +
+            Rejected +
+
+    Priority:
+            Low +
+            Normal +
+            High +
+            Urgent - map to Critical
+            Immediate - map to Critical
+    """
+    
+    tracker_label = 'Type:' + redmine_issue['tracker']['name']  
+    status_label = 'Status:' + redmine_issue['status']['name']   
+    priority_label = 'Priority:' + redmine_issue['priority']['name']
+    if priority_label == 'Priority:Urgent' or priority_label == 'Priority:Immediate':
+        priority_label = 'Priority:Critical'
+    labels = [tracker_label, status_label, priority_label]    
     
     data = {
-        'title': '-RM-{}-MR-{}'.format(
+        'title': '[RM-{}] {}'.format(
             redmine_issue['id'], redmine_issue['subject']),
-        'description': '{}\n\n*(from redmine: created on {}{}{})*'.format(
+        'description': '{}\n\n*(from redmine: migrated on {}{}{})*'.format(
             redmine_issue['description'],
             redmine_issue['created_on'][:10],
             close_text,
             relations_text
-        ),
-        'labels': [redmine_issue['tracker']['name']]
+        )#,
+        #'labels': [tracker_label, status_label, priority_label]
     }
 
+    #print(str(data))
+    
     version = redmine_issue.get('fixed_version', None)
     if version:
         data['milestone_id'] = gitlab_milestones_index[version['name']]['id']
@@ -108,13 +140,17 @@ def convert_issue(redmine_issue, redmine_user_index, gitlab_user_index,
     try:
         author_login = redmine_uid_to_login(
             redmine_issue['author']['id'], redmine_user_index)
-
+        
     except KeyError:
         log.warning(
             'Redmine issue #{} is anonymous, gitlab issue is attributed '
             'to current admin\n'.format(redmine_issue['id']))
         author_login = None
 
+    #Force login to admin (root)        
+    #data['description'] += '\n*(original author : @{})*'.format(author_login)
+    #author_login = 'root'
+        
     meta = {
         'sudo_user': author_login,
         'notes': list(convert_notes(redmine_issue['journals'],
@@ -126,7 +162,22 @@ def convert_issue(redmine_issue, redmine_user_index, gitlab_user_index,
     if assigned_to is not None:
         data['assignee_id'] = redmine_uid_to_gitlab_uid(
             assigned_to['id'], redmine_user_index, gitlab_user_index)
-    return data, meta, redmine_issue["attachments"]
+        print("assignee_id" + str(data['assignee_id']))    
+    else:
+        #TODO:assign to manoj.p7
+        print("assignee_id is NONE !!!")    
+        data['assignee_id'] = gitlab_user_index['manoj.p7']['id']
+        print("Forcing assignee_id to " + str(data['assignee_id']))    
+        
+    """
+    created_at	string	no	Date time string, ISO 8601 formatted, 
+    e.g. 2016-03-11T03:45:40Z (requires admin or project owner rights)
+    
+    """
+    
+    data['created_at'] = redmine_issue.get('created_on') #'2016-03-11T03:45:40Z'
+                    
+    return data, meta, redmine_issue["attachments"], labels
 
 
 def convert_version(redmine_version):

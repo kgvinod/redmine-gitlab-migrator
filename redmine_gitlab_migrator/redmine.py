@@ -109,12 +109,13 @@ class RedmineProject(Project):
                 self.instance_url, issue_id)
                 
             count += 1
-            #if count > 50:
-            #    self.All_Issue_List = detailed_issues
-            #    return detailed_issues  
+            if count > 20:
+                self.All_Issue_List = detailed_issues
+                return detailed_issues  
             
             issue = self.api.get(issue_url)
-            print ("@@@@ got issue with id=" + str(issue['id']))    
+            print ("@@@@ got issue with id=" + str(issue['id']))   
+            #print (issue) 
 
             attachments = issue["attachments"]
             for attachment in attachments:

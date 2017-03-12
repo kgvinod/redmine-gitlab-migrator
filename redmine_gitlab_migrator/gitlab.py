@@ -60,7 +60,7 @@ class GitlabProject(Project):
         """
         return self.api.get(self.api_url)['default_branch'] is None
 
-    def create_issue(self, data, meta, attachments):
+    def create_issue(self, data, meta, attachments, labels):
         """ High-level issue creation
 
         :param meta: dict with "sudo_user", "should_close" and "notes" keys
@@ -94,8 +94,19 @@ class GitlabProject(Project):
         data['description'] = data['description'] + attachment_markdown
         
         issues_url = '{}/issues'.format(self.api_url)
+        
+        #Add labels as query params
+        qlabels = ''
+        for label in labels:
+            qlabels += label + ','
+        
+        issues_url_with_labels = issues_url + "?labels=" + qlabels
+        
         issue = self.api.post(
-            issues_url, data=data, headers={'SUDO': meta['sudo_user']})
+            issues_url_with_labels, data=data, headers={'SUDO': meta['sudo_user']})
+            
+        print('@@##@@ ' + issues_url_with_labels +' ' + str(data))    
+        print('?????@@ Posted issue : ' + str(issue))
 
         issue_url = '{}/{}'.format(issues_url, issue['id'])
 
@@ -108,6 +119,7 @@ class GitlabProject(Project):
 
         # Handle closed status
         if meta['must_close']:
+            #print('@@##@@ must_close')    
             altered_issue = issue.copy()
             altered_issue['state_event'] = 'close'
             self.api.put(issue_url, data=altered_issue)
