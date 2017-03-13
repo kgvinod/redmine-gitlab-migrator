@@ -109,9 +109,9 @@ class RedmineProject(Project):
                 self.instance_url, issue_id)
                 
             count += 1
-            if count > 20:
-                self.All_Issue_List = detailed_issues
-                return detailed_issues  
+            #if count > 2:
+            #    self.All_Issue_List = detailed_issues
+            #    return detailed_issues  
             
             issue = self.api.get(issue_url)
             print ("@@@@ got issue with id=" + str(issue['id']))   
@@ -125,7 +125,10 @@ class RedmineProject(Project):
                 if not os.path.exists(os.path.join(issue_d_folder)):
                     os.makedirs(issue_d_folder)
                 dl_file = os.path.join(issue_d_folder, attachment["filename"]);
-                urllib.request.urlretrieve (attachment["content_url"] +"?key=" + self.api_key, dl_file)
+                if os.path.exists(dl_file):
+                    print ("file already downloaded")
+                else:    
+                    urllib.request.urlretrieve (attachment["content_url"] +"?key=" + self.api_key, dl_file)
 
                 attachment["local_file"] = dl_file;
 
