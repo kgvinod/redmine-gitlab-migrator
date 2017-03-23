@@ -2,6 +2,7 @@ from itertools import chain
 import re
 import urllib.request
 import os
+import time
 
 
 from . import APIClient, Project
@@ -108,31 +109,29 @@ class RedmineProject(Project):
             issue_url = '{}/issues/{}.json?include=journals,watchers,relations,childrens,attachments'.format(
                 self.instance_url, issue_id)
                 
-            count += 1
-            #if count > 2:
-            #    self.All_Issue_List = detailed_issues
-            #    return detailed_issues  
+            if issue_id > 0 and issue_id < 105:                
             
-            issue = self.api.get(issue_url)
-            print ("@@@@ got issue with id=" + str(issue['id']))   
-            #print (issue) 
+                issue = self.api.get(issue_url)
+                print ("@@@@ got issue with id=" + str(issue['id']))   
+                #print (issue) 
 
-            attachments = issue["attachments"]
-            for attachment in attachments:
-                print ("@@@@@ attachment=" + attachment["filename"])
+                detailed_issues.append(issue)
 
-                issue_d_folder = os.path.join(d_folder, str(issue_id));
-                if not os.path.exists(os.path.join(issue_d_folder)):
-                    os.makedirs(issue_d_folder)
-                dl_file = os.path.join(issue_d_folder, attachment["filename"]);
-                if os.path.exists(dl_file):
-                    print ("file already downloaded")
-                else:    
-                    urllib.request.urlretrieve (attachment["content_url"] +"?key=" + self.api_key, dl_file)
+                attachments = issue["attachments"]
+                for attachment in attachments:
+                    print ("@@@@@ attachment=" + attachment["filename"])
 
-                attachment["local_file"] = dl_file;
+                    issue_d_folder = os.path.join(d_folder, str(issue_id));
+                    if not os.path.exists(os.path.join(issue_d_folder)):
+                        os.makedirs(issue_d_folder)
+                    dl_file = os.path.join(issue_d_folder, attachment["filename"]);
+                    if os.path.exists(dl_file):
+                        print ("file already downloaded")
+                    else:    
+                        urllib.request.urlretrieve (attachment["content_url"] +"?key=" + self.api_key, dl_file)
 
-            detailed_issues.append(issue)
+                    attachment["local_file"] = dl_file;
+                
             
         print ("@@@ EXIT redmine::get_all_issues")
         self.All_Issue_List = detailed_issues

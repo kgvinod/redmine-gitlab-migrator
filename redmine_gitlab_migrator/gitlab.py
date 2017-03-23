@@ -1,5 +1,6 @@
 import re
 import requests
+import time
 
 from . import APIClient, Project
 
@@ -87,6 +88,7 @@ class GitlabProject(Project):
             if 'markdown' in jresp:        
                 attachment_markdown += jresp['markdown']        
                 print ("File uploaded to " + str(jresp['url'])) 
+                time.sleep(1)
             else:         
                 print ("Upload of file " + attachment["local_file"] + " failed")
                 

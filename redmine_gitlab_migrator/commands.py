@@ -3,6 +3,7 @@ import argparse
 import logging
 import re
 import sys
+import time
 
 from redmine_gitlab_migrator.redmine import RedmineProject, RedmineClient
 from redmine_gitlab_migrator.gitlab import GitlabProject, GitlabClient
@@ -125,7 +126,7 @@ def perform_migrate_issues(args):
 
     checks = [
         (check_users, 'Required users presence'),
-        (check_no_issue, 'Project has no pre-existing issue'),
+        #(check_no_issue, 'Project has no pre-existing issue'),
     ]
     
     print ("@@@before checks")
@@ -165,6 +166,7 @@ def perform_migrate_issues(args):
             print ("@@@create issue")    
             created = gitlab_project.create_issue(data, meta, attachments, labels)
             log.info('#{iid} {title}'.format(**created))
+            time.sleep(1)
 
 
 def perform_migrate_iid(args):
